@@ -235,12 +235,8 @@ static const trait_id trait_FELINE_FUR( "FELINE_FUR" );
 static const trait_id trait_FUR( "FUR" );
 static const trait_id trait_LIGHTFUR( "LIGHTFUR" );
 static const trait_id trait_LUPINE_FUR( "LUPINE_FUR" );
-static const trait_id trait_HUGE( "HUGE" );
-static const trait_id trait_HUGE_OK( "HUGE_OK" );
 static const trait_id trait_PACIFIST( "PACIFIST" );
 static const trait_id trait_SAVANT( "SAVANT" );
-static const trait_id trait_SMALL2( "SMALL2" );
-static const trait_id trait_SMALL_OK( "SMALL_OK" );
 static const trait_id trait_SQUEAMISH( "SQUEAMISH" );
 static const trait_id trait_URSINE_FUR( "URSINE_FUR" );
 static const trait_id trait_WOOLALLERGY( "WOOLALLERGY" );
@@ -398,7 +394,6 @@ static const std::string flag_UNDERSIZE( "UNDERSIZE" );
 static const std::string flag_USE_UPS( "USE_UPS" );
 
 static const mtype_id mon_player_blob( "mon_player_blob" );
-static const mtype_id mon_shadow_snake( "mon_shadow_snake" );
 
 static const vitamin_id vitamin_blood( "blood" );
 static const morale_type morale_nightmare( "morale_nightmare" );
@@ -2490,7 +2485,7 @@ cata::optional<std::list<item>::iterator> Character::wear_item( const item &to_w
     }
 
     const bool was_deaf = is_deaf();
-    const bool supertinymouse = has_trait( trait_SMALL2 ) || has_trait( trait_SMALL_OK );
+    const bool supertinymouse = get_size() == creature_size::tiny;
     last_item = to_wear.typeId();
 
     std::list<item>::iterator position = position_to_wear_new_item( to_wear );
@@ -5390,8 +5385,8 @@ void Character::update_needs( int rate_multiplier )
     }
 
     // Huge folks take penalties for cramming themselves in vehicles
-    if( in_vehicle && ( ( has_trait( trait_HUGE ) || has_trait( trait_HUGE_OK ) ) )
-        && !( has_trait( trait_NOPAIN ) || has_effect( effect_narcosis ) ) ) {
+    if( in_vehicle && get_size() == creature_size::huge &&
+        !( has_trait( trait_NOPAIN ) || has_effect( effect_narcosis ) ) ) {
         vehicle *veh = veh_pointer_or_null( get_map().veh_at( pos() ) );
         // it's painful to work the controls, but passengers in open topped vehicles are fine
         if( veh && ( veh->enclosed_at( pos() ) || veh->player_in_control( *this->as_player() ) ) ) {
@@ -10855,7 +10850,7 @@ float Character::power_rating() const
     } else if( dmg > 12 ) {
         ret = 3; // Melee weapon or weapon-y tool
     }
-    if( has_trait( trait_HUGE ) || has_trait( trait_HUGE_OK ) ) {
+    if( get_size() == creature_size::huge ) {
         ret += 1;
     }
     if( is_wearing_power_armor( nullptr ) ) {
@@ -11502,8 +11497,8 @@ std::vector<display_proficiency> Character::display_proficiencies() const
     return _proficiencies->display();
 }
 
-void Character::practice_proficiency( const proficiency_id &prof, const time_duration amount,
-                                      const cata::optional<time_duration> max )
+void Character::practice_proficiency( const proficiency_id &prof, const time_duration &amount,
+                                      const cata::optional<time_duration> &max )
 {
     int amt = to_seconds<int>( amount );
     const float pct_before = _proficiencies->pct_practiced( prof );

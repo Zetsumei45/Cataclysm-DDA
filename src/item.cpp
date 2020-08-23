@@ -151,13 +151,9 @@ static const std::string trait_flag_CANNIBAL( "CANNIBAL" );
 static const bionic_id bio_digestion( "bio_digestion" );
 
 static const trait_id trait_CARNIVORE( "CARNIVORE" );
-static const trait_id trait_HUGE( "HUGE" );
-static const trait_id trait_HUGE_OK( "HUGE_OK" );
 static const trait_id trait_JITTERY( "JITTERY" );
 static const trait_id trait_LIGHTWEIGHT( "LIGHTWEIGHT" );
 static const trait_id trait_SAPROVORE( "SAPROVORE" );
-static const trait_id trait_SMALL_OK( "SMALL_OK" );
-static const trait_id trait_SMALL2( "SMALL2" );
 static const trait_id trait_TOLERANCE( "TOLERANCE" );
 static const trait_id trait_WOOLALLERGY( "WOOLALLERGY" );
 
@@ -1309,11 +1305,9 @@ item::sizing item::get_sizing( const Character &p ) const
     if( to_ignore ) {
         return sizing::ignore;
     } else {
-        const bool small = p.has_trait( trait_SMALL2 ) ||
-                           p.has_trait( trait_SMALL_OK );
+        const bool small = p.get_size() == creature_size::tiny;
 
-        const bool big = p.has_trait( trait_HUGE ) ||
-                         p.has_trait( trait_HUGE_OK );
+        const bool big = p.get_size() == creature_size::huge;
 
         // due to the iterative nature of these features, something can fit and be undersized/oversized
         // but that is fine because we have separate logic to adjust encumberance per each. One day we
@@ -4000,21 +3994,30 @@ void item::final_info( std::vector<iteminfo> &info, const iteminfo_query *parts,
                 info.push_back( iteminfo( "DESCRIPTION",
                                           _( "You could use it to craft various other things." ) ) );
             } else {
-                const std::string recipes = enumerate_as_string( item_recipes.begin(), item_recipes.end(),
-                [ &crafting_inv ]( const recipe * r ) {
-                    if( r->deduped_requirements().can_make_with_inventory(
-                            crafting_inv, r->get_component_filter() ) ) {
-                        return r->result_name();
+                // Extract item names from recipes and sort them
+                std::vector<std::pair<std::string, bool>> result_names;
+                std::transform(
+                    item_recipes.begin(), item_recipes.end(),
+                    std::back_inserter( result_names ),
+                [&crafting_inv]( const recipe * r ) {
+                    bool can_make = r->deduped_requirements().can_make_with_inventory(
+                                        crafting_inv, r->get_component_filter() );
+                    return std::make_pair( r->result_name(), can_make );
+                } );
+                std::sort( result_names.begin(), result_names.end(), localized_compare );
+                const std::string recipes =
+                    enumerate_as_string( result_names.begin(), result_names.end(),
+                []( const std::pair<std::string, bool> &p ) {
+                    if( p.second ) {
+                        return p.first;
                     } else {
-                        return string_format( "<dark>%s</dark>", r->result_name() );
+                        return string_format( "<dark>%s</dark>", p.first );
                     }
                 } );
-                if( !recipes.empty() ) {
-                    insert_separation_line( info );
-                    info.push_back( iteminfo( "DESCRIPTION",
-                                              string_format( _( "You could use it to craft: %s" ),
-                                                      recipes ) ) );
-                }
+                insert_separation_line( info );
+                info.push_back( iteminfo( "DESCRIPTION",
+                                          string_format( _( "You could use it to craft: %s" ),
+                                                  recipes ) ) );
             }
         }
     }

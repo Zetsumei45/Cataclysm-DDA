@@ -13,6 +13,7 @@
 #include "crafting.h"
 #include "debug.h"
 #include "enums.h"
+#include "flag.h"
 #include "generic_factory.h"
 #include "handle_liquid.h"
 #include "item.h"
@@ -760,8 +761,6 @@ static void insert_separation_line( std::vector<iteminfo> &info )
 void item_pocket::general_info( std::vector<iteminfo> &info, int pocket_number,
                                 bool disp_pocket_number ) const
 {
-    const std::string space = "  ";
-
     if( disp_pocket_number ) {
         const std::string pocket_num = string_format( _( "Pocket %d:" ), pocket_number );
         info.emplace_back( "DESCRIPTION", pocket_num );
@@ -805,7 +804,6 @@ void item_pocket::general_info( std::vector<iteminfo> &info, int pocket_number,
     info.emplace_back( "DESCRIPTION",
                        string_format( _( "Base moves to remove item: <neutral>%d</neutral>" ),
                                       data->moves ) );
-
     if( data->rigid ) {
         info.emplace_back( "DESCRIPTION", _( "This pocket is <info>rigid</info>." ) );
     }
@@ -845,6 +843,23 @@ void item_pocket::general_info( std::vector<iteminfo> &info, int pocket_number,
                            string_format(
                                _( "This pocket expands at <neutral>%.0f%%</neutral> of the rate of volume of items inside." ),
                                data->volume_multiplier * 100 ) );
+    }
+
+    // Display flags items need to be stored in this pocket
+    if( !data->flag_restriction.empty() ) {
+        info.emplace_back( "DESCRIPTION", _( "<bold>Restrictions</bold>:" ) );
+        bool first = true;
+        for( const std::string &e : data->flag_restriction ) {
+            const json_flag &f = json_flag::get( e );
+            if( !f.restriction().empty() ) {
+                if( first ) {
+                    info.emplace_back( "DESCRIPTION", string_format( "* %s", _( f.restriction() ) ) );
+                    first = false;
+                } else {
+                    info.emplace_back( "DESCRIPTION", string_format( "* <bold>or</bold> %s", _( f.restriction() ) ) );
+                }
+            }
+        }
     }
 }
 

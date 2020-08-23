@@ -19,6 +19,7 @@
 #include "translations.h"
 
 enum action_id : int;
+class hotkey_queue;
 
 namespace cata
 {
@@ -231,6 +232,9 @@ struct input_event {
     }
 
     bool operator!=( const input_event &other ) const;
+
+    std::string long_description() const;
+    std::string short_description() const;
 };
 
 /**
@@ -248,23 +252,23 @@ struct action_attributes {
 // On the joystick there's a maximum of 256 key states.
 // So for joy axis events, we simply use a number larger
 // than that.
-#define JOY_0        0
-#define JOY_1        1
-#define JOY_2        2
-#define JOY_3        3
-#define JOY_4        4
-#define JOY_5        5
-#define JOY_6        6
-#define JOY_7        7
+constexpr int JOY_0 = 0;
+constexpr int JOY_1 = 1;
+constexpr int JOY_2 = 2;
+constexpr int JOY_3 = 3;
+constexpr int JOY_4 = 4;
+constexpr int JOY_5 = 5;
+constexpr int JOY_6 = 6;
+constexpr int JOY_7 = 7;
 
-#define JOY_LEFT        (256 + 1)
-#define JOY_RIGHT       (256 + 2)
-#define JOY_UP          (256 + 3)
-#define JOY_DOWN        (256 + 4)
-#define JOY_RIGHTUP     (256 + 5)
-#define JOY_RIGHTDOWN   (256 + 6)
-#define JOY_LEFTUP      (256 + 7)
-#define JOY_LEFTDOWN    (256 + 8)
+constexpr int JOY_LEFT      = 256 + 1;
+constexpr int JOY_RIGHT     = 256 + 2;
+constexpr int JOY_UP        = 256 + 3;
+constexpr int JOY_DOWN      = 256 + 4;
+constexpr int JOY_RIGHTUP   = 256 + 5;
+constexpr int JOY_RIGHTDOWN = 256 + 6;
+constexpr int JOY_LEFTUP    = 256 + 7;
+constexpr int JOY_LEFTDOWN  = 256 + 8;
 
 enum class keyboard_mode {
     // Accept character input and text input. Input in this mode
@@ -768,6 +772,9 @@ class input_context
          */
         void set_timeout( int val );
         void reset_timeout();
+
+        input_event first_unassigned_hotkey( const hotkey_queue &queue ) const;
+        input_event next_unassigned_hotkey( const hotkey_queue &queue, const input_event &prev ) const;
     private:
 
         std::vector<std::string> registered_actions;
@@ -835,5 +842,28 @@ bool gamepad_available();
 
 // rotate a delta direction clockwise
 void rotate_direction_cw( int &dx, int &dy );
+
+class hotkey_queue
+{
+    public:
+        // ctxt is only used for determining hotkey input type
+        // use input_context::first_unassigned_hotkey() instead to skip assigned actions
+        input_event first( const input_context &ctxt ) const;
+        // use input_context::next_unassigned_hotkey() instead to skip assigned actions
+        input_event next( const input_event &prev ) const;
+
+        /**
+         * In keychar mode:
+         *   a-z, A-Z
+         * In keycode mode:
+         *   a-z, shift a-z
+         */
+        static const hotkey_queue &alphabets();
+
+    private:
+        std::vector<int> codes_keychar;
+        std::vector<int> codes_keycode;
+        std::vector<std::set<keymod_t>> modifiers_keycode;
+};
 
 #endif // CATA_SRC_INPUT_H
